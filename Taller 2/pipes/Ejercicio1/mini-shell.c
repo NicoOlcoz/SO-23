@@ -6,64 +6,36 @@
 #include "constants.h"
 #include "mini-shell-parser.c"
 
-int primerPipe(int indice, int countPipes){
-	return indice == 0;
-}
-
-int ultimoPipe(int indice, int countPipes){
-	return indice == (countPipes - 2);
-}
-
 void hijo(int pipes[][2], int i, char ***progs, int count) {
-	// for (size_t j = 0; j < count; j++) {
-	// 	// Con close eliminamos la referencia a pipes que no vamos a usar
-	// 	if (j != i || (j != (i-1) ) )
-	// 	{
-	// 		close(pipes[j][0]);// Cerramos READ y WRITE
-	// 		close(pipes[j][1]);// Cerramos READ y WRITE
-
-	// 	}
-
-	// 	else if ( j == i){ // Situados en el pipe a la izquierda del hijo
-	// 		close(pipes[j][PIPE_READ]); // Si es pipe siguiente cerramos READ
-
-	// 	} else if (j != (i-1) ) {
-	// 		close(pipes[j][PIPE_WRITE]); // Si es pipe anterior cerramos WRITE
-
-	// 	}
-	// }
-
-	// Si soy el primer proceso (0), quiero redirigir mi stdoutput
-	if(i==0){
-		dup2(pipes[i][PIPE_WRITE], STD_OUTPUT);
-	}else{
-		// Soy  el último proceso
-		dup2(pipes[0][PIPE_READ], STD_INPUT);
+	for (int j = 0; j < count - 1; j++) {
+		// Con close eliminamos la referencia a pipes que no vamos a usar
+		if (j != i && j != i - 1) {
+			// printf("cierro read & write %d, del proceso %d\n", j, i);
+			close(pipes[j][PIPE_READ]);
+			close(pipes[j][PIPE_WRITE]);
+		} else if (j == i){	// Si es el pipe con el que me comunico con el SIGUIENTE proceso
+			// printf("cierro el read %d, del proceso %d\n", j, i);
+			close(pipes[j][PIPE_READ]); 
+		} else if (j == i - 1) { // Si es pipe con el que me comunico con el ANTERIOR proceso
+			// printf("cierro el write %d, del proceso %d\n", j, i);
+			close(pipes[j][PIPE_WRITE]); 
+		}
 	}
 
-	// if (primerPipe(i, count)) {
-	// 	dup2(pipes[i][PIPE_WRITE], STD_OUTPUT);
-		
-	// } else if ( ultimoPipe(i, count) ) {
-	// 	dup2(pipes[count - 2][PIPE_READ], STD_INPUT);
-		
-	// } else {
-	// 	dup2(pipes[i][PIPE_READ], STD_INPUT);
-	// 	dup2(pipes[i][PIPE_WRITE], STD_OUTPUT);
-		
-	// }
-	
-	// TODO: Ejecutar el comando del hijo
-	// printf("Este es el hijo %s\n", (progs+sizeof(progs[0])));
+	if(i == 0){ // Si es el primer proceso (0), quiero redirigir mi stdoutput
+		// printf("redirijo el write %d, del proceso %d\n", i, i);
+		dup2(pipes[i][PIPE_WRITE], STD_OUTPUT);
+	} else if (i == count - 1) { // Si es el ultimo proceso
+		// printf("redirijo el read %d, del proceso %d\n", i - 1, i);
+		dup2(pipes[i - 1][PIPE_READ], STD_INPUT);
+	} else { // Si estamos en un proceso intermedio
+		// printf("redirijo el read %d y el write %d del proceso %d\n", i - 1, i, i);
+		dup2(pipes[i - 1][PIPE_READ], STD_INPUT);
+		dup2(pipes[i][PIPE_WRITE],STD_OUTPUT);
+	}
 	
 	execvp(progs[i][0], progs[i]);
-	
-
-	
 }
-
-
-
 
 static int run(char ***progs, size_t count)
 {	
@@ -82,11 +54,16 @@ static int run(char ***progs, size_t count)
 	for (size_t i = 0; i < count; i++) {
 		int pid = fork();
 		if (pid == 0) {
-			hijo(pipes, i, progs, count); // completar
-			// exit(EXIT_SUCCESS);
+			hijo(pipes, i, progs, count);
 		}
 		children[i] = pid;
 	}
+
+	// Cierro descriptores de pipes en el proceso padre
+    	for (int i = 0; i < count - 1; i++) {
+        	close(pipes[i][0]);
+        	close(pipes[i][1]);
+    	}
 	
 	//TODO: Pensar cuantos procesos necesito
 	//TODO: Pensar cuantos pipes necesito.
