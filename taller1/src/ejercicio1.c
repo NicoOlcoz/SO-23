@@ -24,7 +24,7 @@ struct IntPair tupleArray[10]; // first es PID y second si está vivo (1).
 
 
 void sigterm_handler(int sig) {
-    srand(time(NULL));
+    srand(getpid() + time(NULL));
     int azar = generate_random_number();
     printf("Azar = %d \n", azar);
     if(azar == numero_maldito){
@@ -51,7 +51,7 @@ void sigchild_handler(int sig) {
 
 int main(int argc, char const *argv[]){
     //Funcion para cargar nueva semilla para el numero aleatorio
-    srand(time(NULL));
+    srand(getpid() + time(NULL));
     
     n = atoi(argv[1]);
 	int rondas = atoi(argv[2]);
