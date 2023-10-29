@@ -76,6 +76,7 @@ unsigned int HashMapConcurrente::valor(std::string clave) {
   // Completar (Ejercicio 2)
   unsigned int index = hashIndex(clave);
 
+  std::lock_guard<std::mutex> lock(mutexes[index]);
   for (auto it = tabla[index]->begin(); it != tabla[index]->end(); ++it) {
     if ((*it).first == clave) {
       return (*it).second;
@@ -117,7 +118,7 @@ hashMapPair HashMapConcurrente::maximoParalelo(unsigned int cant_threads) {
                                    hashMapPair("", 0));
 
   std::atomic<int> siguienteIndex;
-  std::atomic_init(&siguienteIndex, -1);
+  std::atomic_init(&siguienteIndex, 0);
 
   // Función que procesa filas de la tabla en paralelo
   auto maximo_thread = [this, &maximos, &siguienteIndex]() {
